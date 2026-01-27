@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Truck, ArrowLeft } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { motion } from 'framer-motion';
+import { API_BASE } from '../lib/api';
 
 import { clsx } from 'clsx'; // Missing import
 
@@ -12,7 +13,7 @@ export const SupplierLogin: React.FC = () => {
     const [suppliers, setSuppliers] = React.useState<any[]>([]);
 
     React.useEffect(() => {
-        fetch('http://127.0.0.1:8000/suppliers')
+        fetch(`${API_BASE}/suppliers`)
             .then(res => res.json())
             .then(data => setSuppliers(data))
             .catch(err => console.error("Failed to load suppliers", err));

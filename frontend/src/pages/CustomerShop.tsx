@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore';
 import { Search, MapPin, Star, X, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
+import { API_BASE } from '../lib/api';
 
 interface GlobalProduct {
     id: number;
@@ -47,7 +48,7 @@ const StoreRow: React.FC<{ store: any, product: any, addToCart: any, submitRevie
         // This refactor fixes that bug too! :)
 
         try {
-            await fetch(`http://127.0.0.1:8000/products/${product.id}/reviews`, {
+            await fetch(`${API_BASE}/products/${product.id}/reviews`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -164,14 +165,14 @@ export const CustomerShop: React.FC = () => {
     const [submittingReview, setSubmittingReview] = useState(false);
 
     useEffect(() => {
-        fetch('http://127.0.0.1:8000/products/global')
+        fetch(`${API_BASE}/products/global`)
             .then(res => res.json())
             .then(data => setProducts(data));
     }, []);
 
     const fetchDetails = async (id: number) => {
         setLoading(true);
-        const res = await fetch(`http://127.0.0.1:8000/products/global/${id}`);
+        const res = await fetch(`${API_BASE}/products/global/${id}`);
         const data = await res.json();
         setSelectedProduct(data);
         setLoading(false);
@@ -184,7 +185,7 @@ export const CustomerShop: React.FC = () => {
         if (!selectedProduct) return;
         setSubmittingReview(true);
         try {
-            await fetch(`http://127.0.0.1:8000/products/${selectedProduct.id}/reviews`, {
+            await fetch(`${API_BASE}/products/${selectedProduct.id}/reviews`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

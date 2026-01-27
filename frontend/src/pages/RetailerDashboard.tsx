@@ -6,6 +6,7 @@ import { BarChart3, TrendingUp, X, CheckCircle, AlertCircle } from 'lucide-react
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import { clsx } from 'clsx';
+import { API_BASE } from '../lib/api';
 
 
 
@@ -45,7 +46,7 @@ export const RetailerDashboard: React.FC = () => {
 
         // Fetch Supplier Options
         try {
-            const res = await fetch(`http://127.0.0.1:8000/products/${product.productId}/suppliers`);
+            const res = await fetch(`${API_BASE}/products/${product.productId}/suppliers`);
             const data = await res.json();
             setSupplierOptions(data);
         } catch (e) {
@@ -59,7 +60,7 @@ export const RetailerDashboard: React.FC = () => {
         if (!supplier || !selectedProduct) return;
 
         try {
-            await fetch('http://127.0.0.1:8000/retailers/orders', {
+            await fetch(`${API_BASE}/retailers/orders`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

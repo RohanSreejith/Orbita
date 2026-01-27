@@ -26,7 +26,7 @@ async def seed():
             GlobalProduct(name="Sunscreen", category="Personal Care", image_url="https://images.unsplash.com/photo-1526947425960-945c6e72858f?auto=format&fit=crop&w=800", description="SPF 50 protection."),
             GlobalProduct(name="Apple", category="Produce", image_url="https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=800", description="Fresh red apple."),
             GlobalProduct(name="Sandwich", category="Food", image_url="https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=800", description="Ham and cheese sandwich."),
-            GlobalProduct(name="Iced Coffee", category="Beverages", image_url="https://images.unsplash.com/photo-1517701604599-bb29b5dd7359?auto=format&fit=crop&w=800", description="Cold brew with milk."),
+            GlobalProduct(name="Iced Coffee", category="Beverages", image_url="https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=800", description="Cold brew with milk."),
         ]
         session.add_all(catalog_items)
         await session.commit()

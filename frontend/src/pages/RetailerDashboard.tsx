@@ -57,7 +57,7 @@ export const RetailerDashboard: React.FC = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    store_id: 1, // Default to Kiosk Alpha (or get from store state)
+                    store_id: useStore.getState().storeId, // Dynamic Store ID
                     product_id: selectedProduct.productId,
                     supplier_id: supplier.supplier_id,
                     quantity: 50 // Default restock quantity

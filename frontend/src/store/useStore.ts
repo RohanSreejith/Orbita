@@ -73,6 +73,7 @@ interface AppState {
     // New Agent Action
     restockLogs: string[];
     notifications: any[];
+    pendingDeliveries: any[];
     runRestockAgent: () => Promise<void>;
     fetchNotifications: () => Promise<void>;
     approveOrder: (orderId: number) => Promise<void>;
@@ -213,12 +214,22 @@ export const useStore = create<AppState>((set, get) => ({
     },
 
     notifications: [],
+    pendingDeliveries: [], // Track orders that are Placed/Shipped but not yet Delivered
     fetchNotifications: async () => {
         const { storeId } = get();
         try {
+            // 1. Fetch Agent Approvals
             const res = await fetch(`${API_BASE}/agent/notifications?store_id=${storeId || 1}`);
             const data = await res.json();
-            set({ notifications: data });
+
+            // 2. Fetch Active Deliveries (Placed/Shipped)
+            const ordRes = await fetch(`${API_BASE}/retailers/${storeId || 1}/orders`);
+            const ordData = await ordRes.json();
+
+            set({
+                notifications: data,
+                pendingDeliveries: Array.isArray(ordData) ? ordData : []
+            });
         } catch (e) {
             console.error("Failed to fetch notifications", e);
         }
@@ -321,9 +332,9 @@ export const useStore = create<AppState>((set, get) => ({
     supplierData: null,
     fetchSupplierData: async () => {
         const { supplierId } = get();
-        if (!supplierId) return;
+        const id = supplierId || 1;
         try {
-            const res = await fetch(`${API_BASE}/suppliers/${supplierId}/dashboard`);
+            const res = await fetch(`${API_BASE}/suppliers/${id}/dashboard`);
             const data = await res.json();
             set({ supplierData: data });
         } catch (e) {
@@ -337,6 +348,24 @@ export const useStore = create<AppState>((set, get) => ({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status })
             });
+
+            // Notify Agent Network
+            if (status === 'Shipped') {
+                get().addAgentMessage({
+                    from: 'warehouse',
+                    to: 'retailer',
+                    content: `Shipment dispatched for Order #${orderId} via Global Logistics. Tracking initialized.`,
+                    type: 'info'
+                });
+            } else if (status === 'Delivered') {
+                get().addAgentMessage({
+                    from: 'warehouse',
+                    to: 'retailer',
+                    content: `Shipment delivered for Order #${orderId}. Inventory successfully restocked.`,
+                    type: 'success'
+                });
+            }
+
             get().fetchSupplierData(); // Refresh list
         } catch (e) {
             console.error("Update failed", e);

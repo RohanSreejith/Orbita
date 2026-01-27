@@ -4,44 +4,29 @@ import { motion } from 'framer-motion';
 
 import { useStore } from '../store/useStore';
 import { useNavigate } from 'react-router-dom';
-import { API_BASE } from '../lib/api';
 
 export const SupplierDashboard: React.FC = () => {
-    const [data, setData] = useState<any>(null);
+    // USE STORE: connect to global state to enable Agent Messages
+    const { supplierData, fetchSupplierData, updateOrderStatus, supplierId } = useStore();
     const [filter, setFilter] = useState<'pending' | 'completed'>('pending');
-    const { supplierId } = useStore();
     const navigate = useNavigate();
 
-    const fetchDashboard = () => {
-        const effectiveId = supplierId || 1;
-        fetch(`${API_BASE}/suppliers/${effectiveId}/dashboard`)
-            .then(res => res.json())
-            .then(setData)
-            .catch(err => console.error("Failed to load supplier dashboard", err));
-    };
-
+    // Replaces local fetchDashboard
     useEffect(() => {
-        fetchDashboard();
-        const interval = setInterval(fetchDashboard, 5000); // Poll for new orders
+        fetchSupplierData();
+        const interval = setInterval(fetchSupplierData, 5000); // Poll for new orders
         return () => clearInterval(interval);
     }, [supplierId, navigate]);
 
     const handleUpdateStatus = async (orderId: number, status: string) => {
-        try {
-            await fetch(`${API_BASE}/suppliers/orders/${orderId}/status`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status })
-            });
-            fetchDashboard(); // Immediate refresh
-        } catch (e) {
-            console.error("Failed to update status", e);
-        }
+        // USE STORE ACTION: Triggers API + Agent Message
+        await updateOrderStatus(orderId, status);
     };
 
-    if (!data) return <div className="p-10 text-center text-neutral-500">Loading Portal...</div>;
+    // Use supplierData from store instead of local 'data'
+    if (!supplierData) return <div className="p-10 text-center text-neutral-500">Loading Portal...</div>;
 
-    const filteredOrders = data.active_orders
+    const filteredOrders = (supplierData.active_orders || [])
         .filter((order: any) => {
             if (filter === 'pending') return order.status !== 'Delivered';
             return order.status === 'Delivered';
@@ -53,14 +38,14 @@ export const SupplierDashboard: React.FC = () => {
             <header>
                 <div className="flex items-center gap-3 mb-2">
                     <Truck className="text-emerald-400" size={32} />
-                    <h1 className="text-4xl font-bold text-white">{data.name}</h1>
+                    <h1 className="text-4xl font-bold text-white">{supplierData.name}</h1>
                 </div>
                 <div className="flex gap-6 text-sm">
                     <span className="flex items-center gap-2 text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                        <Activity size={14} /> Reliability: {data.reliability_score}%
+                        <Activity size={14} /> Reliability: {supplierData.reliability_score}%
                     </span>
                     <span className="flex items-center gap-2 text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">
-                        <Package size={14} /> Catalog Size: {data.catalog.length} SKUs
+                        <Package size={14} /> Catalog Size: {supplierData.catalog.length} SKUs
                     </span>
                 </div>
             </header>
@@ -71,27 +56,25 @@ export const SupplierDashboard: React.FC = () => {
                 <div className="col-span-2 space-y-6">
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                            <Clock size={20} className="text-amber-400" /> 
+                            <Clock size={20} className="text-amber-400" />
                             {filter === 'pending' ? 'Pending Requests' : 'Completed Requests'}
                         </h2>
                         <div className="flex bg-neutral-800 p-1 rounded-lg border border-white/5">
                             <button
                                 onClick={() => setFilter('pending')}
-                                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                                    filter === 'pending' 
-                                        ? 'bg-neutral-700 text-white shadow-sm' 
+                                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${filter === 'pending'
+                                        ? 'bg-neutral-700 text-white shadow-sm'
                                         : 'text-neutral-400 hover:text-neutral-200'
-                                }`}
+                                    }`}
                             >
                                 Pending
                             </button>
                             <button
                                 onClick={() => setFilter('completed')}
-                                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                                    filter === 'completed' 
-                                        ? 'bg-emerald-900/50 text-emerald-400 shadow-sm' 
+                                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${filter === 'completed'
+                                        ? 'bg-emerald-900/50 text-emerald-400 shadow-sm'
                                         : 'text-neutral-400 hover:text-neutral-200'
-                                }`}
+                                    }`}
                             >
                                 Completed
                             </button>
@@ -149,18 +132,18 @@ export const SupplierDashboard: React.FC = () => {
 
                         {/* Fake extra order - only show in completed */}
                         {filter === 'completed' && (
-                        <div className="bg-neutral-800/30 border border-white/5 p-6 rounded-xl flex items-center justify-between opacity-50">
-                            <div>
-                                <div className="flex items-center gap-3 mb-1">
-                                    <span className="font-mono text-xs text-neutral-500">ORD-990</span>
-                                    <span className="text-xs font-bold text-neutral-300 px-2 py-0.5 bg-white/10 rounded">Kiosk Alpha</span>
+                            <div className="bg-neutral-800/30 border border-white/5 p-6 rounded-xl flex items-center justify-between opacity-50">
+                                <div>
+                                    <div className="flex items-center gap-3 mb-1">
+                                        <span className="font-mono text-xs text-neutral-500">ORD-990</span>
+                                        <span className="text-xs font-bold text-neutral-300 px-2 py-0.5 bg-white/10 rounded">Kiosk Alpha</span>
+                                    </div>
+                                    <div>100x Mineral Water</div>
                                 </div>
-                                <div>100x Mineral Water</div>
+                                <div className="text-green-500 flex items-center gap-2 text-sm font-bold">
+                                    <CheckCircle size={16} /> DELIVERED
+                                </div>
                             </div>
-                            <div className="text-green-500 flex items-center gap-2 text-sm font-bold">
-                                <CheckCircle size={16} /> DELIVERED
-                            </div>
-                        </div>
                         )}
                     </div>
                 </div>
@@ -172,7 +155,7 @@ export const SupplierDashboard: React.FC = () => {
                     </h2>
 
                     <div className="space-y-3">
-                        {data.catalog.map((item: any, idx: number) => (
+                        {supplierData.catalog.map((item: any, idx: number) => (
                             <div key={idx} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
                                 <div>
                                     <div className="font-medium text-neutral-200">{item.product_name}</div>

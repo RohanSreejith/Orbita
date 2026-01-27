@@ -61,3 +61,31 @@ async def create_manual_order(order: ManualOrder, db: AsyncSession = Depends(get
     await db.commit()
     
     return {"status": "success", "order_id": new_order.id}
+
+@router.get("/retailers/{store_id}/orders")
+async def get_retailer_orders(store_id: int, db: AsyncSession = Depends(get_db)):
+    from ..models import Order, GlobalProduct
+    
+    # Fetch orders that are active (Placed, Shipped)
+    # We don't need Delivered as those should update stock and clear the alert
+    stmt = (
+        select(Order, GlobalProduct)
+        .join(GlobalProduct, Order.product_id == GlobalProduct.id)
+        .where(Order.store_id == store_id)
+        .where(Order.status.in_(["Placed", "Shipped"]))
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+    
+    orders = []
+    for order, prod in rows:
+        orders.append({
+            "id": order.id,
+            "product_id": order.product_id,
+            "product_name": prod.name,
+            "quantity": order.quantity,
+            "status": order.status,
+            "timestamp": order.timestamp
+        })
+        
+    return orders

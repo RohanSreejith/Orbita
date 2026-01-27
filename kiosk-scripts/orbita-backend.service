@@ -3,9 +3,9 @@ Description=Orbita Kiosk Backend Service
 After=network.target
 
 [Service]
-User=karthik-unni
-WorkingDirectory=/home/karthik-unni/Downloads/Orbita/backend
-ExecStart=/home/karthik-unni/Downloads/Orbita/backend/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+User=Kiosk
+WorkingDirectory=/home/kiosk/Orbita/backend
+ExecStart=/home/kiosk/Orbita/backend/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
 Restart=always
 RestartSec=5
 

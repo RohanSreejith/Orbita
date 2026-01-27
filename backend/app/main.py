@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import products, weather, analytics, system, suppliers, agent, sales, retailers
+from app.routers import products, weather, analytics, system, suppliers, agent, sales, retailers, inventory_rl
 
 app = FastAPI(title="CODEX '26 Kiosk System", version="1.0.0")
 
@@ -35,6 +35,7 @@ app.include_router(retailers.router, tags=["retailers"])
 app.include_router(agent.router, tags=["agent"])
 app.include_router(agent.router, tags=["agent"])
 app.include_router(sales.router, tags=["sales"])
+app.include_router(inventory_rl.router, tags=["inventory_rl"])
 
 @app.get("/health")
 async def health_check():

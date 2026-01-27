@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Store, ShoppingBag, Truck, User } from 'lucide-react';
+import { Store, ShoppingBag, Truck } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';

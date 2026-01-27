@@ -1,7 +1,7 @@
 import React from 'react';
 import { useStore } from '../store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, MessageSquare, ArrowRight } from 'lucide-react';
+import { Brain, ArrowRight } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export const AgentMind: React.FC = () => {

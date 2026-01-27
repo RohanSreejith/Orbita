@@ -1,7 +1,7 @@
 import React from 'react';
 import { useStore } from '../store/useStore';
 import { CloudRain, Sun, Cloud, CloudLightning, Sparkles } from 'lucide-react';
-import { motion } from 'framer-motion';
+
 
 export const WeatherWidget: React.FC = () => {
     const { weather, recommendation } = useStore();

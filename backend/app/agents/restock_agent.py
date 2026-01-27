@@ -1,4 +1,5 @@
 import google.generativeai as genai
+import time
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy import func
@@ -52,7 +53,6 @@ class RestockAgent:
     async def get_avg_rating(self, product_id: int):
         """Calculates average rating for a product"""
         from app.models import Review
-        import sqlalchemy.sql.functions as func
         
         stmt = select(func.avg(Review.rating)).where(Review.product_id == product_id)
         result = await self.db.execute(stmt)
@@ -111,52 +111,69 @@ class RestockAgent:
 
     async def run_cycle(self, store_id: int):
         logs = []
-        low_stock = await self.analyze_stock(store_id)
-        
-        if not low_stock:
-            return ["Stock levels are healthy. No action needed."]
+        try:
+            low_stock = await self.analyze_stock(store_id)
             
-        for item in low_stock:
-            # Get Product Global Info
-            res = await self.db.execute(select(GlobalProduct).where(GlobalProduct.id == item.product_id))
-            g_prod = res.scalars().first()
-            
-            # Get Market
-            offers = await self.get_market_data(item.product_id)
-            
-            if not offers:
-                logs.append(f"⚠️ No suppliers found for {g_prod.name}")
-                continue
-
-            # Check for existing pending orders
-            stmt = select(Order).where(
-                (Order.store_id == store_id) & 
-                (Order.product_id == item.product_id) &
-                (Order.status == "Pending Approval")
-            )
-            existing = await self.db.execute(stmt)
-            if existing.scalars().first():
-                # logs.append(f"ℹ️ Pending order exists for {g_prod.name}. Skipping.")
-                continue
+            if not low_stock:
+                return ["Stock levels are healthy. No action needed."]
                 
-            # GATHER SIGNALS
-            avg_rating = await self.get_avg_rating(item.product_id)
-            
-            # Decide
-            decision = await self.decide_restock(item, g_prod.name, offers, avg_rating, item.price)
-            
-            # Execute
-            if decision:
-                new_order = Order(
-                    store_id=store_id,
-                    supplier_id=decision['supplier_id'],
-                    product_id=item.product_id,
-                    quantity=decision['quantity'],
-                    status="Pending Approval", # Changed from Placed
-                    timestamp=0 
-                )
-                self.db.add(new_order)
-                logs.append(f"🤖 Restock {g_prod.name}: {decision['decision']} ({decision['reason']})")
+            for item in low_stock:
+                try:
+                    # Get Product Global Info
+                    res = await self.db.execute(select(GlobalProduct).where(GlobalProduct.id == item.product_id))
+                    g_prod = res.scalars().first()
+                    
+                    if not g_prod:
+                        logs.append(f"❌ Error: Product ID {item.product_id} not found in Global Catalog.")
+                        continue
+
+                    # Get Market
+                    offers = await self.get_market_data(item.product_id)
+                    
+                    if not offers:
+                        logs.append(f"⚠️ No suppliers found for {g_prod.name}")
+                        continue
+
+                    # Check for existing pending orders
+                    stmt = select(Order).where(
+                        (Order.store_id == store_id) & 
+                        (Order.product_id == item.product_id) &
+                        (Order.status == "Pending Approval")
+                    )
+                    existing = await self.db.execute(stmt)
+                    if existing.scalars().first():
+                        # logs.append(f"ℹ️ Pending order exists for {g_prod.name}. Skipping.")
+                        continue
+                        
+                    # GATHER SIGNALS
+                    avg_rating = await self.get_avg_rating(item.product_id)
+                    
+                    # Decide
+                    decision = await self.decide_restock(item, g_prod.name, offers, avg_rating, item.price)
+                    
+                    # Execute
+                    if decision:
+                        new_order = Order(
+                            store_id=store_id,
+                            supplier_id=decision['supplier_id'],
+                            product_id=item.product_id,
+                            quantity=decision['quantity'],
+                            status="Pending Approval",
+                            timestamp=time.time() 
+                        )
+                        self.db.add(new_order)
+                        log_msg = f"🤖 Restock {g_prod.name}: {decision['decision']} ({decision['reason']})"
+                        logs.append(log_msg)
+                        print(log_msg) # Debug print
+                except Exception as inner_e:
+                     logs.append(f"❌ Error processing item {item.id}: {str(inner_e)}")
+                     print(f"Error processing item {item.id}: {inner_e}")
+                    
+            await self.db.commit()
+            return logs
+        except Exception as e:
+            await self.db.rollback()
+            return [f"🔥 CRITICAL AGENT ERROR: {str(e)}"]
                 
         await self.db.commit()
         return logs

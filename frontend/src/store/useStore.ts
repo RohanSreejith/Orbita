@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { API_BASE } from '../lib/api';
 
 export type Role = 'customer' | 'retailer' | 'supplier' | 'warehouse';
 
@@ -132,7 +133,8 @@ export const useStore = create<AppState>((set, get) => ({
             // Fetch Products for current store
             // Convert legacy storeId to query param
             const sId = storeId || 1;
-            const pRes = await fetch(`http://127.0.0.1:8000/products?store_id=${sId}`);
+            console.log("Fetching from:", `${API_BASE}/products?store_id=${sId}`); // DEBUG LOG
+            const pRes = await fetch(`${API_BASE}/products?store_id=${sId}`);
             const products = await pRes.json();
 
             // Map Backend snake_case to Frontend camelCase
@@ -148,11 +150,11 @@ export const useStore = create<AppState>((set, get) => ({
             }));
 
             // Fetch Weather
-            const wRes = await fetch('http://127.0.0.1:8000/weather');
+            const wRes = await fetch(`${API_BASE}/weather`);
             const wData = await wRes.json();
 
             // Fetch Analytics
-            const aRes = await fetch(`http://127.0.0.1:8000/analytics/dashboard?store_id=${sId}`);
+            const aRes = await fetch(`${API_BASE}/analytics/dashboard?store_id=${sId}`);
             const aData = await aRes.json();
 
             set({
@@ -184,7 +186,7 @@ export const useStore = create<AppState>((set, get) => ({
     runRestockAgent: async () => {
         const { storeId } = get();
         try {
-            const res = await fetch(`http://127.0.0.1:8000/agent/run-restock?store_id=${storeId || 1}`, { method: 'POST' });
+            const res = await fetch(`${API_BASE}/agent/run-restock?store_id=${storeId || 1}`, { method: 'POST' });
             const data = await res.json();
 
             // Add logs to state
@@ -204,7 +206,7 @@ export const useStore = create<AppState>((set, get) => ({
     fetchNotifications: async () => {
         const { storeId } = get();
         try {
-            const res = await fetch(`http://127.0.0.1:8000/agent/notifications?store_id=${storeId || 1}`);
+            const res = await fetch(`${API_BASE}/agent/notifications?store_id=${storeId || 1}`);
             const data = await res.json();
             set({ notifications: data });
         } catch (e) {
@@ -214,7 +216,7 @@ export const useStore = create<AppState>((set, get) => ({
 
     approveOrder: async (orderId: number) => {
         try {
-            await fetch(`http://127.0.0.1:8000/agent/approve/${orderId}`, { method: 'POST' });
+            await fetch(`${API_BASE}/agent/approve/${orderId}`, { method: 'POST' });
             // Refresh
             await get().fetchNotifications();
             await get().fetchInitialData(); // Update stock/orders
@@ -225,7 +227,7 @@ export const useStore = create<AppState>((set, get) => ({
 
     rejectOrder: async (orderId: number) => {
         try {
-            await fetch(`http://127.0.0.1:8000/agent/reject/${orderId}`, { method: 'POST' });
+            await fetch(`${API_BASE}/agent/reject/${orderId}`, { method: 'POST' });
             // Refresh
             await get().fetchNotifications();
         } catch (e) {
@@ -255,7 +257,7 @@ export const useStore = create<AppState>((set, get) => ({
         if (cart.length === 0) return;
 
         try {
-            await fetch('http://127.0.0.1:8000/sales', {
+            await fetch(`${API_BASE}/sales`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -277,7 +279,7 @@ export const useStore = create<AppState>((set, get) => ({
         const { supplierId } = get();
         if (!supplierId) return;
         try {
-            const res = await fetch(`http://127.0.0.1:8000/suppliers/${supplierId}/dashboard`);
+            const res = await fetch(`${API_BASE}/suppliers/${supplierId}/dashboard`);
             const data = await res.json();
             set({ supplierData: data });
         } catch (e) {
@@ -286,7 +288,7 @@ export const useStore = create<AppState>((set, get) => ({
     },
     updateOrderStatus: async (orderId: number, status: string) => {
         try {
-            await fetch(`http://127.0.0.1:8000/suppliers/orders/${orderId}/status`, {
+            await fetch(`${API_BASE}/suppliers/orders/${orderId}/status`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status })

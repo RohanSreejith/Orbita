@@ -20,14 +20,21 @@ sudo apt-get install -y \
 
 # 2. Setup Project Dependencies
 echo "Setting up Backend..."
-cd ~/Orbita/backend
+
+# Detect Project Root (Parent of kiosk-scripts)
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+PROJECT_DIR=$(dirname "$SCRIPT_DIR")
+
+echo "Project Directory detected at: $PROJECT_DIR"
+
+cd "$PROJECT_DIR/backend"
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 deactivate
 
 echo "Setting up Frontend..."
-cd ~/Orbita/frontend
+cd "$PROJECT_DIR/frontend"
 npm install
 
 # 3. Create .xinitrc for Openbox startup
@@ -41,19 +48,20 @@ xset s noblank
 unclutter -idle 0.1 -root &
 
 # Start Backend (in background)
-cd ~/Orbita/backend
+cd $PROJECT_DIR/backend
 source venv/bin/activate
 uvicorn app.main:app --host 127.0.0.1 --port 8000 > backend.log 2>&1 &
 
 # Start Frontend (in background)
-cd ~/Orbita/frontend
-npm run dev -- --port 5173 > frontend.log 2>&1 &
+cd $PROJECT_DIR/frontend
+npm run dev -- --port 5173 --host > frontend.log 2>&1 &
 
 # Wait for servers to wake up
-sleep 10
+sleep 15
 
 # Start Browser in Kiosk Mode
-chromium-browser --kiosk --incognito --noerrdialogs --disable-translate --no-first-run --fast --fast-start --disable-infobars --disable-features=TranslateUI http://localhost:5173
+# Point to 127.0.0.1 to avoid localhost resolution issues
+chromium-browser --kiosk --incognito --noerrdialogs --disable-translate --no-first-run --fast --fast-start --disable-infobars --disable-features=TranslateUI http://127.0.0.1:5173
 EOF
 
 echo "Setup Complete. Reboot and run 'startx' to launch Orbita Kiosk."

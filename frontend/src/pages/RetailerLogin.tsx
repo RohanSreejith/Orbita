@@ -4,6 +4,7 @@ import { Store, ArrowLeft } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { motion } from 'framer-motion';
 import { clsx } from 'clsx';
+import { API_BASE } from '../lib/api';
 
 export const RetailerLogin: React.FC = () => {
     const navigate = useNavigate();
@@ -11,7 +12,7 @@ export const RetailerLogin: React.FC = () => {
     const [stores, setStores] = React.useState<any[]>([]);
 
     React.useEffect(() => {
-        fetch('http://127.0.0.1:8000/stores')
+        fetch(`${API_BASE}/stores`)
             .then(res => res.json())
             .then(data => setStores(data))
             .catch(err => console.error("Failed to load stores", err));

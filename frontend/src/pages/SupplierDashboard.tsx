@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 
 import { useStore } from '../store/useStore';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE } from '../lib/api';
 
 export const SupplierDashboard: React.FC = () => {
     const [data, setData] = useState<any>(null);
@@ -12,7 +13,7 @@ export const SupplierDashboard: React.FC = () => {
 
     const fetchDashboard = () => {
         const effectiveId = supplierId || 1;
-        fetch(`http://127.0.0.1:8000/suppliers/${effectiveId}/dashboard`)
+        fetch(`${API_BASE}/suppliers/${effectiveId}/dashboard`)
             .then(res => res.json())
             .then(setData)
             .catch(err => console.error("Failed to load supplier dashboard", err));
@@ -26,7 +27,7 @@ export const SupplierDashboard: React.FC = () => {
 
     const handleUpdateStatus = async (orderId: number, status: string) => {
         try {
-            await fetch(`http://127.0.0.1:8000/suppliers/orders/${orderId}/status`, {
+            await fetch(`${API_BASE}/suppliers/orders/${orderId}/status`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status })

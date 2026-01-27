@@ -12,6 +12,7 @@ origins = [
     "http://127.0.0.1:5173",
     "http://127.0.0.1:4173",
     "http://127.0.0.1",
+    "*"
 ]
 
 app.add_middleware(
@@ -32,7 +33,6 @@ app.include_router(analytics.router, tags=["analytics"])
 app.include_router(system.router, tags=["system"])
 app.include_router(suppliers.router, tags=["suppliers"])
 app.include_router(retailers.router, tags=["retailers"])
-app.include_router(agent.router, tags=["agent"])
 app.include_router(agent.router, tags=["agent"])
 app.include_router(sales.router, tags=["sales"])
 app.include_router(inventory_rl.router, tags=["inventory_rl"])

@@ -1,0 +1,22 @@
+// Plymouth script for Orbita
+
+// Set background color to black
+Window.SetBackgroundTopColor(0.0, 0.0, 0.0);
+Window.SetBackgroundBottomColor(0.0, 0.0, 0.0);
+
+// Load the logo
+logo_image = Image("orbita-logo.png");
+
+// Get screen dimensions
+screen_width = Window.GetWidth();
+screen_height = Window.GetHeight();
+
+// Calculate centered position
+logo_x = screen_width / 2 - logo_image.GetWidth() / 2;
+logo_y = screen_height / 2 - logo_image.GetHeight() / 2;
+
+// Create sprite and place it
+logo_sprite = Sprite(logo_image);
+logo_sprite.SetX(logo_x);
+logo_sprite.SetY(logo_y);
+logo_sprite.SetZ(10); // Layer index

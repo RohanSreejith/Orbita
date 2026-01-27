@@ -147,13 +147,30 @@ export const RetailerDashboard: React.FC = () => {
         }
     };
 
-    const handlePlaceOrder = (supplierName: string) => {
-        // Mock Order Placement
-        setOrderStatus('success');
-        setTimeout(() => {
-            setIsModalOpen(false);
-            setOrderStatus('idle');
-        }, 2000);
+    const handlePlaceOrder = async (supplierName: string) => {
+        // Find supplier ID from options
+        const supplier = supplierOptions.find(s => s.supplier_name === supplierName);
+        if (!supplier || !selectedProduct) return;
+
+        try {
+            await fetch('http://127.0.0.1:8000/retailers/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    store_id: 1, // Default to Kiosk Alpha (or get from store state)
+                    product_id: selectedProduct.productId,
+                    supplier_id: supplier.supplier_id,
+                    quantity: 50 // Default restock quantity
+                })
+            });
+            setOrderStatus('success');
+            setTimeout(() => {
+                setIsModalOpen(false);
+                setOrderStatus('idle');
+            }, 2000);
+        } catch (e) {
+            console.error("Failed to place manual order", e);
+        }
     };
 
     return (

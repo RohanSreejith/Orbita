@@ -7,18 +7,35 @@ import { useNavigate } from 'react-router-dom';
 
 export const SupplierDashboard: React.FC = () => {
     const [data, setData] = useState<any>(null);
-    const { supplierId, updateOrderStatus } = useStore();
+    const { supplierId } = useStore();
     const navigate = useNavigate();
 
-    useEffect(() => {
-        // DEMO MODE: If no supplier logged in, view as Global Foods (ID 1)
+    const fetchDashboard = () => {
         const effectiveId = supplierId || 1;
-
         fetch(`http://127.0.0.1:8000/suppliers/${effectiveId}/dashboard`)
             .then(res => res.json())
             .then(setData)
             .catch(err => console.error("Failed to load supplier dashboard", err));
+    };
+
+    useEffect(() => {
+        fetchDashboard();
+        const interval = setInterval(fetchDashboard, 5000); // Poll for new orders
+        return () => clearInterval(interval);
     }, [supplierId, navigate]);
+
+    const handleUpdateStatus = async (orderId: number, status: string) => {
+        try {
+            await fetch(`http://127.0.0.1:8000/suppliers/orders/${orderId}/status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+            fetchDashboard(); // Immediate refresh
+        } catch (e) {
+            console.error("Failed to update status", e);
+        }
+    };
 
     if (!data) return <div className="p-10 text-center text-neutral-500">Loading Portal...</div>;
 
@@ -68,7 +85,7 @@ export const SupplierDashboard: React.FC = () => {
                                     <div className="text-xs text-amber-400 font-bold uppercase tracking-wider mb-2">{order.status}</div>
                                     {order.status === "Placed" && (
                                         <button
-                                            onClick={() => updateOrderStatus(order.id, "Shipped")}
+                                            onClick={() => handleUpdateStatus(order.id, "Shipped")}
                                             className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                                         >
                                             Mark Shipped
@@ -76,7 +93,7 @@ export const SupplierDashboard: React.FC = () => {
                                     )}
                                     {order.status === "Shipped" && (
                                         <button
-                                            onClick={() => updateOrderStatus(order.id, "Delivered")}
+                                            onClick={() => handleUpdateStatus(order.id, "Delivered")}
                                             className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                                         >
                                             Mark Delivered
@@ -122,7 +139,7 @@ export const SupplierDashboard: React.FC = () => {
                                 </div>
                                 <div className="text-right">
                                     <div className="font-mono text-emerald-400">${item.wholesale_cost.toFixed(2)}</div>
-                                    <div className="text-[10px] text-neutral-600">UNIT COST</div>
+                                    <div className="text-xs text-neutral-600">UNIT COST</div>
                                 </div>
                             </div>
                         ))}

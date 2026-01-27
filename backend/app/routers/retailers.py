@@ -20,3 +20,30 @@ async def get_all_stores(db: AsyncSession = Depends(get_db)):
         }
         for s in stores
     ]
+
+# --- Manual Restock ---
+from pydantic import BaseModel
+
+class ManualOrder(BaseModel):
+    store_id: int
+    product_id: int
+    supplier_id: int
+    quantity: int
+
+@router.post("/retailers/orders")
+async def create_manual_order(order: ManualOrder, db: AsyncSession = Depends(get_db)):
+    from ..models import Order
+    import time
+    
+    new_order = Order(
+        store_id=order.store_id,
+        supplier_id=order.supplier_id,
+        product_id=order.product_id,
+        quantity=order.quantity,
+        status="Placed", # Manual orders are auto-approved
+        timestamp=time.time()
+    )
+    db.add(new_order)
+    await db.commit()
+    
+    return {"status": "success", "order_id": new_order.id}

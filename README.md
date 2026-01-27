@@ -1,5 +1,7 @@
 # CODEX '26 - Kiosk System (Orbita)
 
+ORBITA- Optimized Reinforcement-Based Inventory & Trade Autonomy
+
 ## Overview
 This is a high-performance, low-latency Kiosk System designed for a Retail Supply Chain. It features a unified interface for Retailers, Suppliers, and Customers, powered by a multi-agent AI system.
 

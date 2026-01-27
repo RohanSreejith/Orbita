@@ -3,6 +3,8 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy import func
 from app.models import StoreInventory, SupplierCatalog, Supplier, Order, GlobalProduct, Review
+from app.agents.rl_model import QLearningAgent
+import numpy as np
 import os
 import json
 
@@ -30,8 +32,7 @@ class RestockAgent:
             # (Simplification: Just sum all sales for now as mock, ideally use timestamp filter)
             from app.models import Sale
             stmt = select(func.sum(Sale.quantity)).where(
-                (Sale.store_id == store_id) & 
-                (Sale.product_id == item.product_id)
+                Sale.store_inventory_id == item.id
             )
             res = await self.db.execute(stmt)
             total_sales_7d = res.scalar() or 0
@@ -121,6 +122,42 @@ class RestockAgent:
         # Sanity Check
         if order_qty < 5: order_qty = 5 # Minimum batch
         if order_qty > 100: order_qty = 100 # Max batch cap
+
+        # --- RL INTEGRATION ---
+        try:
+            # Load RL Agent
+            rl_actions = [0, 20, 50, 100]
+            rl_agent = QLearningAgent(actions=rl_actions)
+            model_path = os.path.join(os.path.dirname(__file__), "q_table.pkl")
+            rl_agent.load_model(model_path)
+            
+            # Construct State (Simplification from Simulator)
+            # Stock State: 0-3, Vel State: 0-1
+            stock_state = 0
+            if item.stock <= 10: stock_state = 0
+            elif item.stock <= 50: stock_state = 1
+            elif item.stock <= 100: stock_state = 2
+            else: stock_state = 3
+            
+            # Simplify velocity for state
+            # (Assuming we have daily_velocity from analyze_stock, but here we just have item)
+            # ideally pass velocity in, for now mock/estimate
+            vel_state = 1 # Assume fast moving for safety in this heuristic check
+            
+            state = (stock_state, vel_state)
+            rl_recommendation = rl_agent.choose_action(state, train=False)
+            
+            print(f"🧠 RL Model suggests ordering ({rl_recommendation}) vs Heuristic ({order_qty})")
+            
+            # Hybrid Decision: Average them or weigh RL provided it's positive
+            if rl_recommendation > 0:
+                rating_notes.append(f"RL Agent Rec: {rl_recommendation}")
+                # Overwrite or blend? Let's blend 50/50
+                order_qty = int((order_qty + rl_recommendation) / 2)
+                
+        except Exception as e:
+            print(f"RL Agent Error: {e}")
+        # ----------------------
         
         # 2. Select Supplier (Reliability preference)
         # Sort by: (Reliability > 90 preferred), then Cost

@@ -11,3 +11,6 @@ httpx
 pytest
 pytest-asyncio
 google-generativeai
+psutil
+numpy
+numpy

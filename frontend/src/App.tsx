@@ -6,6 +6,10 @@ import { RetailerDashboard } from './pages/RetailerDashboard';
 import { SupplierDashboard } from './pages/SupplierDashboard';
 import { useStore } from './store/useStore';
 
+import { LoginPage } from './pages/LoginPage';
+import { RetailerLogin } from './pages/RetailerLogin';
+import { SupplierLogin } from './pages/SupplierLogin';
+
 function App() {
   const { fetchInitialData } = useStore();
 
@@ -16,12 +20,13 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<MainLayout />}>
-          <Route index element={<Navigate to="/shop" replace />} />
-          <Route path="shop" element={<CustomerShop />} />
-          <Route path="retailer" element={<RetailerDashboard />} />
-          <Route path="retailer" element={<RetailerDashboard />} />
-          <Route path="supply-chain" element={<SupplierDashboard />} />
+        <Route path="/" element={<LoginPage />} />
+        <Route path="/login/retailer" element={<RetailerLogin />} />
+        <Route path="/login/supplier" element={<SupplierLogin />} />
+        <Route element={<MainLayout />}>
+          <Route path="/shop" element={<CustomerShop />} />
+          <Route path="/retailer" element={<RetailerDashboard />} />
+          <Route path="/supply-chain" element={<SupplierDashboard />} />
         </Route>
       </Routes>
     </BrowserRouter>

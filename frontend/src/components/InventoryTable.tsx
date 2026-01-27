@@ -2,7 +2,11 @@ import React from 'react';
 import { useStore } from '../store/useStore';
 import { AlertTriangle, CheckCircle } from 'lucide-react';
 
-export const InventoryTable: React.FC = () => {
+interface InventoryTableProps {
+    onRestock: (product: any) => void;
+}
+
+export const InventoryTable: React.FC<InventoryTableProps> = ({ onRestock }) => {
     const { inventory } = useStore();
 
     return (
@@ -21,6 +25,7 @@ export const InventoryTable: React.FC = () => {
                         <th className="px-6 py-3 font-medium">Price</th>
                         <th className="px-6 py-3 font-medium">Stock</th>
                         <th className="px-6 py-3 font-medium">Status</th>
+                        <th className="px-6 py-3 font-medium text-right">Action</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -45,6 +50,14 @@ export const InventoryTable: React.FC = () => {
                                         In Stock
                                     </span>
                                 )}
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                                <button
+                                    onClick={() => onRestock(product)}
+                                    className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded text-white transition-colors"
+                                >
+                                    Restock
+                                </button>
                             </td>
                         </tr>
                     ))}

@@ -1,14 +1,40 @@
 import React from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { AgentMind } from '../components/AgentMind';
-import { ShoppingBag, Truck, BarChart3, CircuitBoard } from 'lucide-react';
+import { ShoppingBag, Truck, BarChart3, CircuitBoard, LogOut, Cpu } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useStore } from '../store/useStore';
 
 export const MainLayout: React.FC = () => {
+    const [stats, setStats] = React.useState({ cpu: 0, ram_used_gb: 0, ram_total_gb: 0 });
+    const { userRole, storeName, logout } = useStore();
+    const navigate = useNavigate();
+
+    React.useEffect(() => {
+        if (!userRole) {
+            navigate('/');
+        }
+    }, [userRole, navigate]);
+
+    React.useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await fetch('http://127.0.0.1:8000/system/stats');
+                const data = await res.json();
+                setStats(data);
+            } catch (e) {
+                console.error("Stats error", e);
+            }
+        };
+        fetchStats();
+        const interval = setInterval(fetchStats, 2000);
+        return () => clearInterval(interval);
+    }, []);
+
     const navItems = [
         { path: '/shop', label: 'Customer', icon: ShoppingBag },
-        { path: '/retailer', label: 'Retailer', icon: BarChart3 },
-        { path: '/supply-chain', label: 'Supply & Warehouse', icon: Truck },
+        { path: '/login/retailer', label: 'Retailer', icon: BarChart3 },
+        { path: '/login/supplier', label: 'Supply & Warehouse', icon: Truck },
     ];
 
     return (
@@ -20,9 +46,12 @@ export const MainLayout: React.FC = () => {
                     <span className="font-bold text-xl tracking-tight bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
                         ORBITA
                     </span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-neutral-400 border border-white/5">
-                        Kiosk Mode
-                    </span>
+                    {storeName && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-neutral-400 border border-white/5 flex items-center gap-1">
+                            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                            {storeName}
+                        </span>
+                    )}
                 </div>
 
                 <div className="flex gap-1">
@@ -43,8 +72,21 @@ export const MainLayout: React.FC = () => {
                     ))}
                 </div>
 
-                <div className="w-24 text-right text-[10px] text-neutral-600 font-mono">
-                    RAM: 142MB
+                <div className="flex items-center gap-6">
+                    <div className="flex gap-4 text-[10px] text-neutral-400 font-mono border-r border-white/10 pr-6">
+                        <div className="flex items-center gap-1.5">
+                            <Cpu className="w-3 h-3 text-emerald-500" />
+                            <span>CPU: {stats.cpu}%</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                            <span>RAM: {stats.ram_used_gb} / {stats.ram_total_gb} GB</span>
+                        </div>
+                    </div>
+
+                    <button onClick={logout} className="text-neutral-500 hover:text-white transition-colors" title="Logout">
+                        <LogOut size={16} />
+                    </button>
                 </div>
             </nav>
 

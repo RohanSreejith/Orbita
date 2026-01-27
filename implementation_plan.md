@@ -66,6 +66,14 @@ We will create a monorepo structure in `d:/Personal Projects/CODEX26/Orbita`:
 - **Pydantic** for data validation.
 - **JWT** for lightweight, stateless authentication.
 
+#### Database Schema Refactor (Real World Model)
+To support "All products from all stores" and "Supplier Comparisons":
+1.  **`GlobalProduct`**: The definition of an item (Name, Category, Image) - master catalog.
+2.  **`Store`**: Retailer accounts (Kiosk A, Kiosk B).
+3.  **`StoreInventory`**: Join table (`Store` <-> `GlobalProduct`) with `RetailPrice`, `Stock`.
+4.  **`Supplier`**: Supplier accounts.
+5.  **`SupplierCatalog`**: Join table (`Supplier` <-> `GlobalProduct`) with `WholesaleCost`, `Reliability`.
+
 ### 3. Frontend (React)
 - **Vite** for building.
 - **React Router** for navigating between Login, Retailer, Supplier, Customer views.
@@ -74,7 +82,12 @@ We will create a monorepo structure in `d:/Personal Projects/CODEX26/Orbita`:
 - **[NEW] Resource Monitor**: A small pill badge showing current RAM usage (mocked or real via API) to prove the "efficiency" point.
 
 ### 4. Retailer Portal Features (Detailed)
+- **Login Page**: Select Store context.
 - **Live Inventory Grid**: Tables showing Real-time stock, Price, and Status (Low/Normal).
+- **Restock Page (New)**:
+  - Table of low stock items.
+  - **Supplier Comparison**: For each item, show cards/rows for available suppliers with Cost & ETA.
+  - "One-Click Buy" action.
 - **Auto-Restock Agent**:
   - *Trigger*: Customer purchase.
   - *Logic*: If stock < Threshold -> Agent compares Supplier A vs B prices -> Places "Draft Order".

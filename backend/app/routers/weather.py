@@ -28,76 +28,65 @@ async def get_weather(lat: float = 51.51, lon: float = -0.13):
 
 from sqlalchemy.future import select
 from ..database import AsyncSessionLocal
-from ..models import Product
+from ..models import StoreInventory, GlobalProduct
 import random
 
-async def get_agent_recommendation(condition: str, temp: float):
-    # Agent Logic: Map External State (Weather) -> Internal Needs (Inventory)
-    
-    target_keywords = []
-    reason_template = ""
-    
-    if condition == 'rainy' or condition == 'stormy':
-        target_keywords = ["Umbrella", "Coffee", "Tea", "Soup", "Bread", "Comfort"]
-        reason_template = "Heavy rain detected. High probability of customers seeking warmth and protection."
-    elif temp > 20: # Warm/Sunny
-        target_keywords = ["Sunscreen", "Water", "Juice", "Cold", "Ice", "Fruit", "Apple", "Banana"]
-        reason_template = f"High temperature ({temp}°C) detected. Demand structure shifting towards hydration and cooling products."
-    else: # Cold/Cloudy/Default
-        target_keywords = ["Milk", "Bread", "Coffee", "Tea"] 
-        reason_template = "Overcast/Neutral conditions. optimizing for daily staples and comfort items."
+import google.generativeai as genai
+import os
+import json
 
-    # Query DB - We fetch all and filter in Python for this Hackathon scale (faster than complex SQL 'LIKE')
+# Configure Gemini
+# In production, use os.getenv("GEMINI_API_KEY")
+API_KEY = "AIzaSyByQ6l_gmnzHSuJaVShP2DCe-n7eRJKoLQ"
+genai.configure(api_key=API_KEY)
+
+model = genai.GenerativeModel('gemini-2.0-flash')
+
+async def get_agent_recommendation(condition: str, temp: float):
+    # 1. Fetch Inventory for Store #1 (Default)
     async with AsyncSessionLocal() as db:
-        result = await db.execute(select(Product))
+        query = (
+            select(GlobalProduct)
+            .join(StoreInventory, StoreInventory.product_id == GlobalProduct.id)
+            .where(StoreInventory.store_id == 1) # Context: Kiosk Alpha
+            .where(StoreInventory.stock > 0)     # Only suggest in-stock items
+        )
+        result = await db.execute(query)
         products = result.scalars().all()
         
-        # smart filter
-        recommended_products = [
-            p for p in products 
-            if any(k.lower() in p.name.lower() or k.lower() in p.category.lower() for k in target_keywords)
-        ]
+    if not products:
+        return {"item": "N/A", "reason": "Inventory Empty"}
         
-        if not recommended_products:
-            # Fallback to random if no keywords match
-            selected = random.choice(products) if products else None
-            return {"item": selected.name if selected else "N/A", "reason": "General stock promotion for balanced sales."}
+    # 2. Construct Prompt
+    inventory_list = ", ".join([f"{p.name} ({p.category})" for p in products])
+    
+    prompt = f"""
+    You are an AI Retail Supply Chain Agent. 
+    Current Weather in London: {condition}, {temp}°C.
+    
+    My Inventory: [{inventory_list}]
+    
+    Task: Select the ONE best product from my inventory to promote right now to maximize sales/utility.
+    Output JSON ONLY: {{ "item": "Exact Product Name", "reason": "Short, data-driven insight (max 1 sentence)." }}
+    """
+    
+    try:
+        # 3. Ask Gemini
+        response = await model.generate_content_async(prompt)
+        text = response.text.strip()
+        
+        # Cleanup markdown formatting if present
+        if text.startswith("```json"):
+            text = text[7:-3]
             
-        # Select best product
-        selected = random.choice(recommended_products)
+        data = json.loads(text)
+        return data
         
-        # Generate Dynamic Reason based on Product Category + Weather
-        reason = "AI Market Analysis: "
-        cat = selected.category.lower()
-        name = selected.name.lower()
+    except Exception as e:
+        error_str = str(e)
+        print(f"LLM Error: {error_str}")
         
-        if condition in ['rainy', 'stormy']:
-            if "accessories" in cat or "umbrella" in name:
-                 reason += "Precipitation probability > 70%. Immediate demand spike for rain protection."
-            elif "pantry" in cat or "coffee" in name or "tea" in name:
-                 reason += "Wet weather correlates with 40% uptake in hot beverage consumption."
-            else:
-                 reason += "Customers seeking comfort items during inclement weather."
-                 
-        elif temp > 20: # Hot
-            if "produce" in cat or "fruit" in cat:
-                 reason += f"High temps ({temp}°C) drive sales of hydrating fresh produce."
-            elif "beverage" in cat or "juice" in name:
-                 reason += "Heat wave logic: Cooling beverages are top priority."
-            elif "personal" in cat:
-                 reason += "UV Index forecast suggests high demand for skin protection."
-            else:
-                 reason += "Warm weather purchasing behavior signals demand for this item."
-                 
-        else: # Cold/Neutral
-             if "bakery" in cat:
-                 reason += "Cooler temps favor high-calorie comfort foods and bakery staples."
-             elif "pantry" in cat:
-                 reason += "Stocking up on shelf-stable essentials is common in this forecast."
-             else:
-                 reason += "Standard algorithmic restock based on historical neutral-weather patterns."
-        
-        return {
-             "item": selected.name,
-             "reason": reason
-        }
+        if "429" in error_str:
+            return {"item": "Featured Item", "reason": "AI is experiencing high traffic (Rate Limit). Showing standard promotion."}
+            
+        return {"item": "Featured Item", "reason": "AI Connection temporarily unavailable. Displaying default promotion."}

@@ -12,6 +12,7 @@ export interface Product {
     image: string;
     category: string;
     minStockThreshold: number; // For auto-restock trigger
+    sourceStoreId?: number; // Track which store this item belongs to
 }
 
 export interface Supplier {
@@ -186,13 +187,22 @@ export const useStore = create<AppState>((set, get) => ({
     runRestockAgent: async () => {
         const { storeId } = get();
         try {
-            const res = await fetch(`${API_BASE}/agent/run-restock?store_id=${storeId || 1}`, { method: 'POST' });
+            const res = await fetch(`${API_BASE}/agent/run-hierarchical?store_id=${storeId || 1}`, { method: 'POST' });
             const data = await res.json();
 
             // Add logs to state
             set((state) => ({
                 restockLogs: [...data.logs, ...state.restockLogs]
             }));
+
+            // Add Neural Link Interactions (Staggered for visual effect)
+            if (data.interactions) {
+                data.interactions.forEach((msg: any, index: number) => {
+                    setTimeout(() => {
+                        get().addAgentMessage(msg);
+                    }, index * 800); // 800ms delay between messages for "thinking" effect
+                });
+            }
 
             // Refresh Inventory to show new stock (if any)
             get().fetchInitialData();
@@ -220,6 +230,15 @@ export const useStore = create<AppState>((set, get) => ({
             // Refresh
             await get().fetchNotifications();
             await get().fetchInitialData(); // Update stock/orders
+
+            // Notify Agent Network
+            get().addAgentMessage({
+                from: 'warehouse',
+                to: 'supplier',
+                content: `Order #${orderId} Approved. Shipping initiated via Global Logistics.`,
+                type: 'success'
+            });
+
         } catch (e) {
             console.error("Failed to approve", e);
         }
@@ -256,18 +275,43 @@ export const useStore = create<AppState>((set, get) => ({
         const { cart, storeId, fetchInitialData } = get();
         if (cart.length === 0) return;
 
+        // Group items by store
+        const ordersByStore: Record<number, { product_id: number; quantity: number }[]> = {};
+
+        cart.forEach(item => {
+            const sId = item.sourceStoreId || storeId || 1; // Fallback to current store or 1
+            if (!ordersByStore[sId]) ordersByStore[sId] = [];
+            ordersByStore[sId].push({ product_id: item.productId, quantity: item.qty });
+        });
+
         try {
-            await fetch(`${API_BASE}/sales`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    store_id: storeId || 1,
-                    items: cart.map(i => ({ product_id: i.productId, quantity: i.qty }))
-                })
-            });
+            // Execute checkout for each store
+            await Promise.all(
+                Object.entries(ordersByStore).map(([sId, items]) =>
+                    fetch(`${API_BASE}/sales`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            store_id: Number(sId),
+                            items: items
+                        })
+                    })
+                )
+            );
+
             set({ cart: [] });
             // Refresh Inventory immediately to see stock drop
             fetchInitialData();
+
+            // Notify Agent Network
+            const storeCount = Object.keys(ordersByStore).length;
+            get().addAgentMessage({
+                from: 'customer',
+                to: 'retailer',
+                content: `Customer purchase complete across ${storeCount} store(s). Inventory updated.`,
+                type: 'info'
+            });
+
         } catch (e) {
             console.error("Checkout failed", e);
         }

@@ -32,7 +32,7 @@ interface ProductDetail extends GlobalProduct {
 }
 
 // Sub-component for individual store rows to handle partial state
-const StoreRow: React.FC<{ store: any, product: any, addToCart: any, submitReview: any }> = ({ store, product, addToCart, submitReview }) => {
+const StoreRow: React.FC<{ store: any, product: any, addToCart: any, onReviewSuccess: () => void }> = ({ store, product, addToCart, onReviewSuccess }) => {
     const [qty, setQty] = useState(1);
     const [reviewText, setReviewText] = useState('');
     const [reviewRating, setReviewRating] = useState(5);
@@ -58,8 +58,10 @@ const StoreRow: React.FC<{ store: any, product: any, addToCart: any, submitRevie
                     comment: reviewText
                 })
             });
-            // Ideally notify parent to refresh, but for now just clear
+
+            // Notify parent to refresh
             setReviewText('');
+            onReviewSuccess();
         } catch (e) { console.error(e); }
         setSubmitting(false);
     };
@@ -102,7 +104,7 @@ const StoreRow: React.FC<{ store: any, product: any, addToCart: any, submitRevie
                         <button onClick={() => setQty(Math.min(store.stock, qty + 1))} className="text-white px-2 hover:text-blue-400 font-bold">+</button>
                     </div>
                     <button
-                        onClick={() => addToCart({ ...product, productId: product.id, id: String(product.id), stock: store.stock } as any, qty)}
+                        onClick={() => addToCart({ ...product, productId: product.id, id: String(product.id), stock: store.stock, sourceStoreId: store.store_id } as any, qty)}
                         className={clsx(
                             "flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg",
                             store.stock > 0
@@ -159,10 +161,7 @@ export const CustomerShop: React.FC = () => {
     const [selectedProduct, setSelectedProduct] = useState<ProductDetail | null>(null);
     const [loading, setLoading] = useState(false);
 
-    // Review Form State
-    const [reviewText, setReviewText] = useState('');
-    const [reviewRating, setReviewRating] = useState(5);
-    const [submittingReview, setSubmittingReview] = useState(false);
+
 
     useEffect(() => {
         fetch(`${API_BASE}/products/global`)
@@ -176,33 +175,10 @@ export const CustomerShop: React.FC = () => {
         const data = await res.json();
         setSelectedProduct(data);
         setLoading(false);
-        // Reset form
-        setReviewText('');
-        setReviewRating(5);
+
     };
 
-    const submitReview = async (storeId: number) => {
-        if (!selectedProduct) return;
-        setSubmittingReview(true);
-        try {
-            await fetch(`${API_BASE}/products/${selectedProduct.id}/reviews`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    store_id: storeId,
-                    user_name: "Customer", // Mocked
-                    rating: reviewRating,
-                    comment: reviewText
-                })
-            });
-            // Refresh details
-            fetchDetails(selectedProduct.id);
-            setReviewText(''); // Clear only on success
-        } catch (e) {
-            console.error(e);
-        }
-        setSubmittingReview(false);
-    };
+
 
     const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
 
@@ -334,7 +310,7 @@ export const CustomerShop: React.FC = () => {
 
                                     <div className="space-y-4">
                                         {selectedProduct.availability.map((store, idx) => (
-                                            <StoreRow key={idx} store={store} product={selectedProduct} addToCart={addToCart} submitReview={submitReview} />
+                                            <StoreRow key={idx} store={store} product={selectedProduct} addToCart={addToCart} onReviewSuccess={() => fetchDetails(selectedProduct.id)} />
                                         ))}
 
                                         {selectedProduct.availability.length === 0 && (

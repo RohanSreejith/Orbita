@@ -23,15 +23,8 @@ export const RetailerDashboard: React.FC = () => {
     const todaySales = analyticsData.find(d => d.name === todayLabel)?.sales || 0;
 
     // Simulate background agent running periodically
-    React.useEffect(() => {
-        const run = async () => {
-            await runRestockAgent();
-        };
-        // Run immediately on mount, then every 60s
-        run();
-        const interval = setInterval(run, 60000);
-        return () => clearInterval(interval);
-    }, []);
+    // Agent is now triggered manually via the NotificationWidget for better demo control
+    // React.useEffect(() => { ... }) removed to prevent double-firing in StrictMode
 
     // Restock Modal State
     const [selectedProduct, setSelectedProduct] = useState<any>(null);

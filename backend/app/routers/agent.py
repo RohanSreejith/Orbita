@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from ..database import get_db
 from ..agents.restock_agent import RestockAgent
+from ..agents.hierarchical_agents import MultiAgentOrchestrator
 from ..models import Order, GlobalProduct, Supplier, SupplierCatalog
 
 router = APIRouter()
@@ -12,6 +13,12 @@ async def run_restock_agent(store_id: int = 1, db: AsyncSession = Depends(get_db
     agent = RestockAgent(db)
     logs = await agent.run_cycle(store_id)
     return {"logs": logs}
+
+@router.post("/agent/run-hierarchical")
+async def run_hierarchical_agent(store_id: int = 1, db: AsyncSession = Depends(get_db)):
+    orchestrator = MultiAgentOrchestrator(db)
+    result = await orchestrator.run_replenishment_cycle(store_id)
+    return result # Returns { "logs": [], "interactions": [] }
 
 @router.get("/agent/notifications")
 async def get_notifications(store_id: int = 1, db: AsyncSession = Depends(get_db)):

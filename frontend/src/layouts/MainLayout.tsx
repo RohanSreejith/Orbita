@@ -16,8 +16,6 @@ export const MainLayout: React.FC = () => {
         }
     }, [userRole, navigate]);
 
-
-
     const navItems = [
         { path: '/shop', label: 'Customer', icon: ShoppingBag },
         { path: '/login/retailer', label: 'Retailer', icon: BarChart3 },
@@ -60,13 +58,12 @@ export const MainLayout: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-6">
-
-
                     {userRole === 'retailer' && <NotificationWidget />}
 
                     <button onClick={logout} className="text-neutral-500 hover:text-white transition-colors" title="Logout">
                         <LogOut size={16} />
                     </button>
+                </div>
             </nav>
 
             {/* Main Content Area */}

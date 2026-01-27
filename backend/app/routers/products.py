@@ -58,7 +58,7 @@ async def get_global_catalog(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(GlobalProduct))
     return result.scalars().all()
 
-from ..models import Store, StoreInventory, Review, Order, Supplier
+from ..models import Store, StoreInventory, Review
 from sqlalchemy import func
 import time
 
@@ -79,43 +79,8 @@ async def add_review(product_id: int, review: ReviewSchema, db: AsyncSession = D
         timestamp=time.time()
     )
     db.add(new_review)
-    
-    # 4. FEEDBACK LOOP: Update Supplier Reliability based on Product Score
-    # Find who we bought this item from most recently
-    stmt = (
-        select(Order)
-        .where(
-            (Order.store_id == review.store_id) & 
-            (Order.product_id == product_id)
-        )
-        .order_by(Order.timestamp.desc())
-        .limit(1)
-    )
-    res = await db.execute(stmt)
-    last_order = res.scalars().first()
-    
-    if last_order:
-        # Get Supplier
-        sup_res = await db.execute(select(Supplier).where(Supplier.id == last_order.supplier_id))
-        supplier = sup_res.scalars().first()
-        
-        if supplier:
-            # Algorithm: Weighted impact (5% weight to single review to avoid volatility)
-            # Map 1-5 Stars -> 0-100 Score
-            # 5=100, 4=80, 3=60, 2=40, 1=20
-            review_score = review.rating * 20 
-            
-            # Apply Impact
-            new_reliability = (supplier.reliability * 0.95) + (review_score * 0.05)
-            supplier.reliability = int(new_reliability)
-            
-            # Clamp 0-100
-            supplier.reliability = max(0, min(100, supplier.reliability))
-            
-            print(f"📉 Feedback Loop: User rated {review.rating} stars. {supplier.name} reliability moved to {supplier.reliability}%")
-            
     await db.commit()
-    return {"status": "success", "message": "Review recorded & Supplier Score Updated"}
+    return {"status": "success"}
 
 @router.get("/products/global/{product_id}")
 async def get_product_details(product_id: int, db: AsyncSession = Depends(get_db)):

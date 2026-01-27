@@ -1,15 +1,14 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { AgentMind } from '../components/AgentMind';
-import { ShoppingBag, Box, Truck, BarChart3, CircuitBoard } from 'lucide-react';
+import { ShoppingBag, Truck, BarChart3, CircuitBoard } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export const MainLayout: React.FC = () => {
     const navItems = [
         { path: '/shop', label: 'Customer', icon: ShoppingBag },
         { path: '/retailer', label: 'Retailer', icon: BarChart3 },
-        { path: '/supplier', label: 'Supplier', icon: Truck },
-        { path: '/warehouse', label: 'Warehouse', icon: Box },
+        { path: '/supply-chain', label: 'Supply & Warehouse', icon: Truck },
     ];
 
     return (

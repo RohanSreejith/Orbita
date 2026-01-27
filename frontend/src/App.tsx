@@ -12,8 +12,8 @@ function App() {
           <Route index element={<Navigate to="/shop" replace />} />
           <Route path="shop" element={<CustomerShop />} />
           <Route path="retailer" element={<RetailerDashboard />} />
-          <Route path="supplier" element={<SupplierDashboard />} />
-          <Route path="warehouse" element={<SupplierDashboard />} /> {/* Reusing supplier for warehouse for now */}
+          <Route path="retailer" element={<RetailerDashboard />} />
+          <Route path="supply-chain" element={<SupplierDashboard />} />
         </Route>
       </Routes>
     </BrowserRouter>

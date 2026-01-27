@@ -73,6 +73,19 @@ We will create a monorepo structure in `d:/Personal Projects/CODEX26/Orbita`:
 - **[NEW] "Agent Mind" Component**: A floating or sidebar component that logs "Agent Thoughts" (e.g., "Retailer Agent: Stock low on Apples, requesting Quote...").
 - **[NEW] Resource Monitor**: A small pill badge showing current RAM usage (mocked or real via API) to prove the "efficiency" point.
 
+### 4. Retailer Portal Features (Detailed)
+- **Live Inventory Grid**: Tables showing Real-time stock, Price, and Status (Low/Normal).
+- **Auto-Restock Agent**:
+  - *Trigger*: Customer purchase.
+  - *Logic*: If stock < Threshold -> Agent compares Supplier A vs B prices -> Places "Draft Order".
+- **Climate-Aware Intelligence**:
+  - Mocked Weather API input (Sunny/Rainy).
+  - *Logic*: If Rain -> Recommend "Umbrellas/Hot Coffee".
+  - *UI*: "AI Recommendation Shelf" widget.
+- **Analytics Dashboard**:
+  - Sales Trend Graph (Line Chart).
+  - Revenue vs Cost (Bar Chart).
+
 ### 4. Kiosk Mode (Ubuntu)
 - We will provide a `setup_kiosk.sh` script that:
   - Installs `openbox`, `chromium-browser`, `xorg`.

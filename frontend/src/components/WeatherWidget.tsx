@@ -4,7 +4,7 @@ import { CloudRain, Sun, Cloud, CloudLightning, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const WeatherWidget: React.FC = () => {
-    const { weather, setWeather } = useStore();
+    const { weather, recommendation } = useStore();
 
     const weatherIcons = {
         sunny: Sun,
@@ -13,30 +13,17 @@ export const WeatherWidget: React.FC = () => {
         stormy: CloudLightning,
     };
 
-    const WeatherIcon = weatherIcons[weather];
-
-    // Mock recommendation logic
-    const recommendations = {
-        sunny: { item: 'Cold Drinks', reason: 'High temperature predicted.' },
-        rainy: { item: 'Umbrellas', reason: 'Heavy rainfall expected.' },
-        cloudy: { item: 'Tea/Coffee', reason: 'Cooler breeze detected.' },
-        stormy: { item: 'Batteries', reason: 'Power outage possibility.' },
-    };
-
-    const rec = recommendations[weather];
+    const WeatherIcon = weatherIcons[weather] || Sun;
 
     return (
         <div className="bg-gradient-to-br from-blue-900/40 to-purple-900/40 border border-white/10 rounded-xl p-6 relative overflow-hidden group">
-            {/* Interactive Weather Toggles (Hidden trigger for demo) */}
-            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                {(Object.keys(weatherIcons) as Array<keyof typeof weatherIcons>).map(w => (
-                    <button
-                        key={w}
-                        onClick={() => setWeather(w)}
-                        className={`w-2 h-2 rounded-full ${weather === w ? 'bg-white' : 'bg-white/20'}`}
-                        title={w}
-                    />
-                ))}
+            {/* Real Data Badge */}
+            <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/20 border border-white/5 backdrop-blur-sm">
+                <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                <span className="text-[10px] font-mono text-neutral-300 uppercase tracking-wider">LIVE API</span>
             </div>
 
             <div className="flex items-start justify-between">
@@ -58,9 +45,9 @@ export const WeatherWidget: React.FC = () => {
                     <span className="text-xs font-bold uppercase tracking-wider">AI Recommendation</span>
                 </div>
                 <p className="text-sm leading-relaxed">
-                    Suggest stocking <span className="text-white font-bold underline decoration-purple-500 underline-offset-2">{rec.item}</span>.
+                    Suggest stocking <span className="text-white font-bold underline decoration-purple-500 underline-offset-2">{recommendation?.item || 'Loading...'}</span>.
                     <br />
-                    <span className="italic opacity-70 text-xs">Reason: {rec.reason}</span>
+                    <span className="italic opacity-70 text-xs">Reason: {recommendation?.reason || 'Analyzing market...'}</span>
                 </p>
             </div>
 

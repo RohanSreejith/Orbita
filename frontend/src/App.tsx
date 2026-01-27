@@ -1,10 +1,18 @@
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from './layouts/MainLayout';
 import { CustomerShop } from './pages/CustomerShop';
 import { RetailerDashboard } from './pages/RetailerDashboard';
 import { SupplierDashboard } from './pages/SupplierDashboard';
+import { useStore } from './store/useStore';
 
 function App() {
+  const { fetchInitialData } = useStore();
+
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>

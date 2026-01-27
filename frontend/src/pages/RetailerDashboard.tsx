@@ -4,7 +4,12 @@ import { WeatherWidget } from '../components/WeatherWidget';
 import { AnalyticsCharts } from '../components/AnalyticsCharts';
 import { BarChart3, TrendingUp } from 'lucide-react';
 
+import { useStore } from '../store/useStore';
+
 export const RetailerDashboard: React.FC = () => {
+    const { inventory } = useStore();
+    const activeAlerts = inventory.filter(p => p.stock <= p.minStockThreshold).length;
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Header Stats */}
@@ -24,7 +29,7 @@ export const RetailerDashboard: React.FC = () => {
                     <div className="flex justify-between items-start">
                         <div>
                             <p className="text-neutral-400 text-sm font-medium uppercase tracking-wider">Active Alerts</p>
-                            <h3 className="text-3xl font-bold mt-1 text-amber-500">3</h3>
+                            <h3 className="text-3xl font-bold mt-1 text-amber-500">{activeAlerts}</h3>
                         </div>
                         <div className="p-2 bg-amber-500/20 rounded-lg text-amber-400">
                             <BarChart3 className="w-5 h-5" />

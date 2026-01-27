@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from .routers import products, weather
 
 app = FastAPI(title="CODEX '26 Kiosk System", version="1.0.0")
 
@@ -21,6 +22,9 @@ app.add_middleware(
 @app.get("/")
 async def root():
     return {"message": "Kiosk System Backend Verified", "status": "running"}
+
+app.include_router(products.router, tags=["products"])
+app.include_router(weather.router, tags=["weather"])
 
 @app.get("/health")
 async def health_check():

@@ -25,6 +25,11 @@ export interface AnalyticsData {
     demand: number;
 }
 
+export interface Recommendation {
+    item: string;
+    reason: string;
+}
+
 export type WeatherType = 'sunny' | 'rainy' | 'cloudy' | 'stormy';
 
 export interface AgentMessage {
@@ -41,6 +46,7 @@ interface AppState {
     inventory: Product[];
     agentMessages: AgentMessage[];
     weather: WeatherType;
+    recommendation: Recommendation | null;
     analyticsData: AnalyticsData[];
     suppliers: Supplier[];
 
@@ -49,19 +55,15 @@ interface AppState {
     updateStock: (productId: string, amount: number) => void;
     addAgentMessage: (msg: Omit<AgentMessage, 'id' | 'timestamp'>) => void;
     setWeather: (w: WeatherType) => void;
+    fetchInitialData: () => Promise<void>;
 }
 
 export const useStore = create<AppState>((set) => ({
     currentUser: null,
-    inventory: [
-        { id: '1', name: 'Fresh Apples', price: 1.20, stock: 50, image: 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6', category: 'Fruits', minStockThreshold: 10 },
-        { id: '2', name: 'Organic Bananas', price: 0.80, stock: 120, image: 'https://images.unsplash.com/photo-1603833665858-e61d17a86224', category: 'Fruits', minStockThreshold: 20 },
-        { id: '3', name: 'Whole Milk', price: 2.50, stock: 30, image: 'https://images.unsplash.com/photo-1563636619-e9143da7973b', category: 'Dairy', minStockThreshold: 5 },
-        { id: '4', name: 'Sourdough Bread', price: 3.00, stock: 15, image: 'https://images.unsplash.com/photo-1585478402431-7e1086bced25', category: 'Bakery', minStockThreshold: 5 },
-        { id: '5', name: 'Umbrella', price: 15.00, stock: 5, image: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2', category: 'Accessories', minStockThreshold: 3 },
-    ],
+    inventory: [],
     agentMessages: [],
     weather: 'sunny',
+    recommendation: null,
     analyticsData: [
         { name: 'Mon', sales: 4000, demand: 2400 },
         { name: 'Tue', sales: 3000, demand: 1398 },
@@ -78,6 +80,37 @@ export const useStore = create<AppState>((set) => ({
 
     setUser: (role) => set({ currentUser: role }),
     setWeather: (weather) => set({ weather }),
+
+    fetchInitialData: async () => {
+        try {
+            // Fetch Products
+            const pRes = await fetch('http://localhost:8000/products');
+            const products = await pRes.json();
+
+            // Map Backend snake_case to Frontend camelCase
+            const inventory = products.map((p: any) => ({
+                id: p.id.toString(),
+                name: p.name,
+                price: p.price,
+                stock: p.stock,
+                image: p.image_url,
+                category: p.category,
+                minStockThreshold: p.min_stock_threshold
+            }));
+
+            // Fetch Weather
+            const wRes = await fetch('http://localhost:8000/weather');
+            const wData = await wRes.json();
+
+            set({
+                inventory,
+                weather: wData.condition,
+                recommendation: wData.recommendation
+            });
+        } catch (error) {
+            console.error("Failed to fetch initial data:", error);
+        }
+    },
 
     updateStock: (productId, amount) => set((state) => ({
         inventory: state.inventory.map(p =>

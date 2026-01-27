@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Orbita
+Description=Orbita Kiosk Boot Theme
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/orbita
+ScriptFile=/usr/share/plymouth/themes/orbita/orbita.script

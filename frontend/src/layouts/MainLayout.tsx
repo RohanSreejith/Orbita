@@ -1,13 +1,12 @@
 import React from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { AgentMind } from '../components/AgentMind';
-import { ShoppingBag, Truck, BarChart3, CircuitBoard, LogOut, Cpu } from 'lucide-react';
+import { ShoppingBag, Truck, BarChart3, CircuitBoard, LogOut } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useStore } from '../store/useStore';
 import { NotificationWidget } from '../components/NotificationWidget';
 
 export const MainLayout: React.FC = () => {
-    const [stats, setStats] = React.useState({ cpu: 0, ram_used_gb: 0, ram_total_gb: 0 });
     const { userRole, storeName, logout } = useStore();
     const navigate = useNavigate();
 
@@ -17,20 +16,7 @@ export const MainLayout: React.FC = () => {
         }
     }, [userRole, navigate]);
 
-    React.useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                const res = await fetch('http://127.0.0.1:8000/system/stats');
-                const data = await res.json();
-                setStats(data);
-            } catch (e) {
-                console.error("Stats error", e);
-            }
-        };
-        fetchStats();
-        const interval = setInterval(fetchStats, 2000);
-        return () => clearInterval(interval);
-    }, []);
+
 
     const navItems = [
         { path: '/shop', label: 'Customer', icon: ShoppingBag },
@@ -74,23 +60,13 @@ export const MainLayout: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-6">
-                    <div className="flex gap-4 text-[10px] text-neutral-400 font-mono border-r border-white/10 pr-6">
-                        <div className="flex items-center gap-1.5">
-                            <Cpu className="w-3 h-3 text-emerald-500" />
-                            <span>CPU: {stats.cpu}%</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                            <span>RAM: {stats.ram_used_gb} / {stats.ram_total_gb} GB</span>
-                        </div>
-                    </div>
-                </div>
 
-                {userRole === 'retailer' && <NotificationWidget />}
 
-                <button onClick={logout} className="text-neutral-500 hover:text-white transition-colors" title="Logout">
-                    <LogOut size={16} />
-                </button>
+                    {userRole === 'retailer' && <NotificationWidget />}
+
+                    <button onClick={logout} className="text-neutral-500 hover:text-white transition-colors" title="Logout">
+                        <LogOut size={16} />
+                    </button>
             </nav>
 
             {/* Main Content Area */}

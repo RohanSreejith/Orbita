@@ -14,8 +14,12 @@ import { clsx } from 'clsx';
 
 
 export const RetailerDashboard: React.FC = () => {
-    const { inventory, runRestockAgent } = useStore();
+    const { inventory, runRestockAgent, analyticsData } = useStore();
     const activeAlerts = inventory.filter(p => p.stock <= p.minStockThreshold).length;
+
+    // Calculate Today's Sales from Analytics Data
+    const todayLabel = new Date().toLocaleDateString('en-US', { weekday: 'short' });
+    const todaySales = analyticsData.find(d => d.name === todayLabel)?.sales || 0;
 
     // Simulate background agent running periodically
     React.useEffect(() => {
@@ -83,7 +87,7 @@ export const RetailerDashboard: React.FC = () => {
                     <div className="flex justify-between items-start">
                         <div>
                             <p className="text-neutral-400 text-sm font-medium uppercase tracking-wider">Total Sales (Today)</p>
-                            <h3 className="text-3xl font-bold mt-1 text-white">$4,290.50</h3>
+                            <h3 className="text-3xl font-bold mt-1 text-white">${todaySales.toFixed(2)}</h3>
                         </div>
                         <div className="p-2 bg-green-500/20 rounded-lg text-green-400">
                             <TrendingUp className="w-5 h-5" />
@@ -170,7 +174,16 @@ export const RetailerDashboard: React.FC = () => {
                                     <>
                                         <div className="flex items-center gap-2 mb-4 text-sm text-blue-400 bg-blue-500/10 p-3 rounded-lg border border-blue-500/20">
                                             <AlertCircle size={16} />
-                                            <span>AI Recommendation: "Global Foods Inc" has the best reliability score for urgent delivery.</span>
+                                            <span>
+                                                AI Insight: {selectedProduct.stock < 20 ? "Critical Level." : "Stock Low."}
+                                                Recommended Action:{" "}
+                                                <span className="font-bold">
+                                                    {/* Mock Rating Logic (In real app, fetch from backend) */}
+                                                    {["Coca Cola", "Croissant"].includes(selectedProduct.name)
+                                                        ? "Aggressive Restock (High Demand ⭐ 4.8)"
+                                                        : "Standard Restock (Moderate Demand ⭐ 3.5)"}
+                                                </span>
+                                            </span>
                                         </div>
 
                                         <table className="w-full text-left">

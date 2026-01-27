@@ -1,6 +1,7 @@
 import google.generativeai as genai
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
+from sqlalchemy import func
 from app.models import StoreInventory, SupplierCatalog, Supplier, Order, GlobalProduct
 import os
 import json
@@ -48,52 +49,65 @@ class RestockAgent:
             })
         return offers
 
-    async def decide_restock(self, item, global_product_name, offers):
-        """Uses Gemini to decide the best supplier"""
+    async def get_avg_rating(self, product_id: int):
+        """Calculates average rating for a product"""
+        from app.models import Review
+        import sqlalchemy.sql.functions as func
         
-        # PROMPT ENGINEERING
-        prompt = f"""
-        You are an Autonomous Supply Chain Agent.
-        Task: Choose the best supplier to restock '{global_product_name}'.
+        stmt = select(func.avg(Review.rating)).where(Review.product_id == product_id)
+        result = await self.db.execute(stmt)
+        avg = result.scalar()
+        return avg if avg else 3.0 # Default to neutral 3.0 if no reviews
+
+    async def decide_restock(self, item, global_product_name, offers, avg_rating, retail_price):
+        """Uses Logic (or Gemini) to decide restock based on Demand, Price, Rating"""
         
-        Context:
-        - Current Stock: {item.stock} (CRITICAL LOW)
-        - Goal: Balance low cost with high reliability. Urgency is high.
+        # 1. Calculate Optimal Quantity
+        # Strategy: Target Stock Level based on Demand indicators (Rating) and Cost inhibition (Price)
+        # Base Target: Keep 4x the min threshold (buffer for sales)
+        base_target = item.min_stock_threshold * 4 
+        if base_target < 20: base_target = 20 # Minimum sensible shelf presence
         
-        Market Offers:
-        {json.dumps(offers, indent=2)}
-        
-        Output Format: JSON only.
-        {{
-            "decision": "Order from [Supplier Name]",
-            "supplier_id": [ID],
-            "reason": "[Short explanation]",
-            "quantity": 50
-        }}
-        """
-        
-        # MOCK RESPONSE (Fallback if API fails or no key)
-        # We will try to call real API if key exists, else mock logic
-        
-        try:
-            # model = genai.GenerativeModel('gemini-pro')
-            # response = model.generate_content(prompt)
-            # return json.loads(response.text)
+        # RATING FACTOR
+        rating_notes = []
+        rating_mult = 1.0
+        if avg_rating >= 4.5:
+            rating_mult = 1.5 # High demand item, stock up!
+            rating_notes.append("High Rating ⭐")
+        elif avg_rating <= 2.5:
+            rating_mult = 0.5 # Poor item, minimize stock
+            rating_notes.append("Low Rating 📉")
             
-            # Simple Logic Fallback for Hackathon Stability (Simulating Agent)
-            # 1. Sort by reliability desc, then cost asc
-            sorted_offers = sorted(offers, key=lambda x: (-x['reliability'], x['cost']))
-            best = sorted_offers[0]
+        # PRICE FACTOR
+        # If item is expensive, we don't want too much capital tied up
+        price_mult = 1.0
+        if retail_price > 100:
+            price_mult = 0.7 # Expensive, lean inventory
+            rating_notes.append("High Value Item 💎")
             
-            return {
-                "decision": f"Order from {best['supplier_name']}",
-                "supplier_id": best['supplier_id'],
-                "reason": f"Selected for highest reliability ({best['reliability']}%) and reasonable cost (${best['cost']}).",
-                "quantity": 50
-            }
-        except Exception as e:
-            print(f"Agent Error: {e}")
-            return None
+        # CALCULATION
+        target_stock = int(base_target * rating_mult * price_mult)
+        order_qty = target_stock - item.stock
+        
+        # Sanity Check
+        if order_qty < 5: order_qty = 5 # Minimum batch
+        if order_qty > 100: order_qty = 100 # Max batch cap
+        
+        # 2. Select Supplier (Reliability preference)
+        # Sort by: (Reliability > 90 preferred), then Cost
+        # Heuristic: Score = Reliability - (Cost * 0.5) to balance
+        sorted_offers = sorted(offers, key=lambda x: (x['reliability'] * 1 + (1000 - x['cost'])), reverse=True)
+        best = sorted_offers[0]
+        
+        reason = f"Based on {avg_rating:.1f}★ rating. Target: {target_stock} units. " + ", ".join(rating_notes)
+        if not rating_notes: reason += "Standard restock."
+
+        return {
+            "decision": f"Order {order_qty} from {best['supplier_name']}",
+            "supplier_id": best['supplier_id'],
+            "reason": reason,
+            "quantity": order_qty
+        }
 
     async def run_cycle(self, store_id: int):
         logs = []
@@ -103,7 +117,7 @@ class RestockAgent:
             return ["Stock levels are healthy. No action needed."]
             
         for item in low_stock:
-            # Get Product Name
+            # Get Product Global Info
             res = await self.db.execute(select(GlobalProduct).where(GlobalProduct.id == item.product_id))
             g_prod = res.scalars().first()
             
@@ -125,8 +139,11 @@ class RestockAgent:
                 # logs.append(f"ℹ️ Pending order exists for {g_prod.name}. Skipping.")
                 continue
                 
+            # GATHER SIGNALS
+            avg_rating = await self.get_avg_rating(item.product_id)
+            
             # Decide
-            decision = await self.decide_restock(item, g_prod.name, offers)
+            decision = await self.decide_restock(item, g_prod.name, offers, avg_rating, item.price)
             
             # Execute
             if decision:
@@ -139,7 +156,7 @@ class RestockAgent:
                     timestamp=0 
                 )
                 self.db.add(new_order)
-                logs.append(f"🤖 Proposed Restock for {g_prod.name}: {decision['decision']}")
+                logs.append(f"🤖 Restock {g_prod.name}: {decision['decision']} ({decision['reason']})")
                 
         await self.db.commit()
         return logs

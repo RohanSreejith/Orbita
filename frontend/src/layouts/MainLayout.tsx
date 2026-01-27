@@ -4,6 +4,7 @@ import { AgentMind } from '../components/AgentMind';
 import { ShoppingBag, Truck, BarChart3, CircuitBoard, LogOut, Cpu } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useStore } from '../store/useStore';
+import { NotificationWidget } from '../components/NotificationWidget';
 
 export const MainLayout: React.FC = () => {
     const [stats, setStats] = React.useState({ cpu: 0, ram_used_gb: 0, ram_total_gb: 0 });
@@ -83,11 +84,13 @@ export const MainLayout: React.FC = () => {
                             <span>RAM: {stats.ram_used_gb} / {stats.ram_total_gb} GB</span>
                         </div>
                     </div>
-
-                    <button onClick={logout} className="text-neutral-500 hover:text-white transition-colors" title="Logout">
-                        <LogOut size={16} />
-                    </button>
                 </div>
+
+                {userRole === 'retailer' && <NotificationWidget />}
+
+                <button onClick={logout} className="text-neutral-500 hover:text-white transition-colors" title="Logout">
+                    <LogOut size={16} />
+                </button>
             </nav>
 
             {/* Main Content Area */}

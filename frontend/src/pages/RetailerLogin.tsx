@@ -62,7 +62,7 @@ export const RetailerLogin: React.FC = () => {
                                     <div className="font-semibold text-white group-hover:text-purple-300">{store.name}</div>
                                     <div className="text-xs text-neutral-500">{store.location} • ID: {store.id}</div>
                                 </div>
-                                <div className={clsx("w-2.5 h-2.5 rounded-full", store.id === 1 ? "bg-green-500" : "bg-yellow-500")} />
+                                <div className={clsx("w-2.5 h-2.5 rounded-full", store.has_alerts ? "bg-yellow-500" : "bg-green-500")} />
                             </button>
                         ))}
                     </div>

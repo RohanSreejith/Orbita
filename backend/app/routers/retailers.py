@@ -12,14 +12,28 @@ async def get_all_stores(db: AsyncSession = Depends(get_db)):
     result = await db.execute(stmt)
     stores = result.scalars().all()
     
-    return [
-        {
+    
+    # Check for alerts (Pending Approval orders)
+    from ..models import Order
+    
+    stores_data = []
+    for s in stores:
+        # Check if store has pending orders
+        stmt_orders = select(Order).where(
+            (Order.store_id == s.id) & 
+            (Order.status == "Pending Approval")
+        )
+        res = await db.execute(stmt_orders)
+        has_alerts = len(res.scalars().all()) > 0
+        
+        stores_data.append({
             "id": s.id,
             "name": s.name,
-            "location": s.location
-        }
-        for s in stores
-    ]
+            "location": s.location,
+            "has_alerts": has_alerts
+        })
+    
+    return stores_data
 
 # --- Manual Restock ---
 from pydantic import BaseModel

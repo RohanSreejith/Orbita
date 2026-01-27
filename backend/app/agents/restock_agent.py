@@ -2,7 +2,7 @@ import google.generativeai as genai
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy import func
-from app.models import StoreInventory, SupplierCatalog, Supplier, Order, GlobalProduct
+from app.models import StoreInventory, SupplierCatalog, Supplier, Order, GlobalProduct, Review
 import os
 import json
 
@@ -16,14 +16,46 @@ class RestockAgent:
         # genai.configure(api_key=API_KEY) 
 
     async def analyze_stock(self, store_id: int):
-        """Finds items that need restocking"""
+        """Finds items that need restocking based on Velocity & Lead Time"""
+        # 1. Get Inventory
         stmt = select(StoreInventory).where(StoreInventory.store_id == store_id)
         result = await self.db.execute(stmt)
         inventory = result.scalars().all()
         
         low_stock_items = []
+        
+        # 2. Analyze each item
         for item in inventory:
+            # A. Calculate Velocity (Sales per day over last 7 days)
+            # (Simplification: Just sum all sales for now as mock, ideally use timestamp filter)
+            from app.models import Sale
+            stmt = select(func.sum(Sale.quantity)).where(
+                (Sale.store_id == store_id) & 
+                (Sale.product_id == item.product_id)
+            )
+            res = await self.db.execute(stmt)
+            total_sales_7d = res.scalar() or 0
+            daily_velocity = total_sales_7d / 7.0
+            
+            # B. Determine Lead Time (Mocking 2 days for all suppliers for safety)
+            lead_time_days = 2 
+            safety_buffer = 1
+            
+            # C. Check Coverage
+            # IF Velocity is high, we might need to order even if stock > min_threshold
+            should_restock = False
+            
+            if daily_velocity > 0:
+                days_until_empty = item.stock / daily_velocity
+                if days_until_empty <= (lead_time_days + safety_buffer):
+                    should_restock = True
+                    print(f"🚀 Velocity Trigger: {item.product_id} has {days_until_empty:.1f} days cover (Vel: {daily_velocity:.1f}/day)")
+            
+            # Fallback to absolute threshold if no sales history
             if item.stock <= item.min_stock_threshold:
+                should_restock = True
+                
+            if should_restock:
                 low_stock_items.append(item)
         
         return low_stock_items
@@ -51,9 +83,6 @@ class RestockAgent:
 
     async def get_avg_rating(self, product_id: int):
         """Calculates average rating for a product"""
-        from app.models import Review
-        import sqlalchemy.sql.functions as func
-        
         stmt = select(func.avg(Review.rating)).where(Review.product_id == product_id)
         result = await self.db.execute(stmt)
         avg = result.scalar()
@@ -110,6 +139,7 @@ class RestockAgent:
         }
 
     async def run_cycle(self, store_id: int):
+        print(f"DEBUG: run_cycle started for store {store_id}")
         logs = []
         low_stock = await self.analyze_stock(store_id)
         
@@ -128,6 +158,7 @@ class RestockAgent:
                 logs.append(f"⚠️ No suppliers found for {g_prod.name}")
                 continue
 
+            print(f"DEBUG: Checking existing orders for store={store_id}, prod={item.product_id} (type {type(item.product_id)})")
             # Check for existing pending orders
             stmt = select(Order).where(
                 (Order.store_id == store_id) & 
@@ -140,7 +171,11 @@ class RestockAgent:
                 continue
                 
             # GATHER SIGNALS
-            avg_rating = await self.get_avg_rating(item.product_id)
+            try:
+                avg_rating = await self.get_avg_rating(item.product_id)
+            except Exception as e:
+                print(f"⚠️ Rating Fetch Failed for {item.product_id}: {e}")
+                avg_rating = 3.0 # Default fallback
             
             # Decide
             decision = await self.decide_restock(item, g_prod.name, offers, avg_rating, item.price)

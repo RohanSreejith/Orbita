@@ -1,35 +1,35 @@
 import asyncio
-from app.database import AsyncSessionLocal, init_db
-from app.models import Order
 from sqlalchemy import select, delete
+from app.database import AsyncSessionLocal
+from app.models import Order
 
-async def clean_duplicates():
+async def clean():
     async with AsyncSessionLocal() as db:
-        print("Checking for Pending Approval orders...")
-        result = await db.execute(select(Order).where(Order.status == "Pending Approval"))
-        orders = result.scalars().all()
+        # Get all pending orders
+        stmt = select(Order).where(Order.status == "Pending Approval")
+        res = await db.execute(stmt)
+        orders = res.scalars().all()
         
         seen = set()
         duplicates = []
         
         print(f"Found {len(orders)} pending orders.")
         
-        for order in orders:
-            key = (order.store_id, order.product_id)
+        for o in orders:
+            key = (o.store_id, o.product_id, o.supplier_id, o.quantity)
             if key in seen:
-                duplicates.append(order)
+                duplicates.append(o.id)
             else:
                 seen.add(key)
                 
         if duplicates:
-            print(f"Found {len(duplicates)} duplicates. Removing...")
-            for dup in duplicates:
-                print(f"Deleting duplicate Order ID: {dup.id} for Product ID: {dup.product_id}")
-                await db.delete(dup)
+            print(f"Deleting {len(duplicates)} duplicates: {duplicates}")
+            del_stmt = delete(Order).where(Order.id.in_(duplicates))
+            await db.execute(del_stmt)
             await db.commit()
             print("Cleanup complete.")
         else:
             print("No duplicates found.")
 
 if __name__ == "__main__":
-    asyncio.run(clean_duplicates())
+    asyncio.run(clean())

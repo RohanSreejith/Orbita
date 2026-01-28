@@ -8,6 +8,7 @@ import { API_BASE } from '../lib/api';
 
 export const SupplierDashboard: React.FC = () => {
     const [data, setData] = useState<any>(null);
+    const [filter, setFilter] = useState<'pending' | 'completed'>('pending');
     const { supplierId } = useStore();
     const navigate = useNavigate();
 
@@ -40,6 +41,13 @@ export const SupplierDashboard: React.FC = () => {
 
     if (!data) return <div className="p-10 text-center text-neutral-500">Loading Portal...</div>;
 
+    const filteredOrders = data.active_orders
+        .filter((order: any) => {
+            if (filter === 'pending') return order.status !== 'Delivered';
+            return order.status === 'Delivered';
+        })
+        .sort((a: any, b: any) => b.id - a.id);
+
     return (
         <div className="max-w-7xl mx-auto space-y-8">
             <header>
@@ -61,12 +69,42 @@ export const SupplierDashboard: React.FC = () => {
 
                 {/* Incoming Orders Panel */}
                 <div className="col-span-2 space-y-6">
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                        <Clock size={20} className="text-amber-400" /> Incoming Orders
-                    </h2>
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                            <Clock size={20} className="text-amber-400" /> 
+                            {filter === 'pending' ? 'Pending Requests' : 'Completed Requests'}
+                        </h2>
+                        <div className="flex bg-neutral-800 p-1 rounded-lg border border-white/5">
+                            <button
+                                onClick={() => setFilter('pending')}
+                                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                                    filter === 'pending' 
+                                        ? 'bg-neutral-700 text-white shadow-sm' 
+                                        : 'text-neutral-400 hover:text-neutral-200'
+                                }`}
+                            >
+                                Pending
+                            </button>
+                            <button
+                                onClick={() => setFilter('completed')}
+                                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                                    filter === 'completed' 
+                                        ? 'bg-emerald-900/50 text-emerald-400 shadow-sm' 
+                                        : 'text-neutral-400 hover:text-neutral-200'
+                                }`}
+                            >
+                                Completed
+                            </button>
+                        </div>
+                    </div>
 
                     <div className="space-y-4">
-                        {data.active_orders.map((order: any) => (
+                        {filteredOrders.length === 0 && (
+                            <div className="p-8 text-center text-neutral-500 bg-neutral-800/30 rounded-xl border border-dashed border-white/5">
+                                No {filter} orders found.
+                            </div>
+                        )}
+                        {filteredOrders.map((order: any) => (
                             <motion.div
                                 key={order.id}
                                 initial={{ opacity: 0, x: -20 }}
@@ -109,7 +147,8 @@ export const SupplierDashboard: React.FC = () => {
                             </motion.div>
                         ))}
 
-                        {/* Fake extra order to look busy */}
+                        {/* Fake extra order - only show in completed */}
+                        {filter === 'completed' && (
                         <div className="bg-neutral-800/30 border border-white/5 p-6 rounded-xl flex items-center justify-between opacity-50">
                             <div>
                                 <div className="flex items-center gap-3 mb-1">
@@ -122,6 +161,7 @@ export const SupplierDashboard: React.FC = () => {
                                 <CheckCircle size={16} /> DELIVERED
                             </div>
                         </div>
+                        )}
                     </div>
                 </div>
 
